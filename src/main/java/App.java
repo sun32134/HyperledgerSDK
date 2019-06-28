@@ -1,67 +1,52 @@
 
+import jdk.nashorn.internal.runtime.linker.Bootstrap;
 import org.hyperledger.fabric.sdk.*;
-import org.hyperledger.fabric.sdk.security.CryptoSuite;
+import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
+import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
+import org.hyperledger.fabric.sdk.exception.ProposalException;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hyperledger.fabric.sdk.Channel.PeerOptions.createPeerOptions;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 public class App {
 
     private static final String EXPECTED_EVENT_NAME = "event";
 
-    final static String CHAIN_CODE_FILEPATH = "Chaincode";
-    final static String CHAIN_CODE_NAME = "fabcar";
+    final static String CHAIN_CODE_FILEPATH = "Resource/Chaincode";
     final static String CHAIN_CODE_PATH = "github.com/fabcar";
+    final static String CHAIN_CODE_NAME = "fabcar";
     final static String CHAIN_CODE_VERSION = "1";
     final static TransactionRequest.Type CHAIN_CODE_LANG = TransactionRequest.Type.GO_LANG;
 
     public static void main(String[] argv) throws Exception {
         HFClient hfClient = HFClient.createNewInstance();
-        SystemInit(hfClient);
-    }
-
-    public static void SystemInit(HFClient hfclient) throws Exception {
-        SampleOrg org1 = new SampleOrg("peerOrg1", "Org1MSP");
-        org1.setDomainName("org1.example.com");
-
-        org1.setCAName("ca_peerOrg1");
-        org1.setCALocation("http://192.168.1.164:7054");
-
-        org1.addPeerLocation("peer0.org1.example.com", "grpc://192.168.1.164:7051");
-        org1.addPeerLocation("peer1.org1.example.com", "grpc://192.168.1.164:7056");
-        org1.addOrdererLocation("orderer.example.com", "grpc://192.168.1.164:7050");
-
-        File sampleStoreFile = new File(System.getProperty("user.home") + "/test.properties");
-        if (sampleStoreFile.exists()) { //For testing start fresh
-            sampleStoreFile.delete();
-        }
-
-        final SampleStore sampleStore = new SampleStore(sampleStoreFile);
-
-        SampleUser admin = sampleStore.getMember("admin", org1.getName(), org1.getMSPID(),
-                findFileSk("Resource/Org1User/Admin@org1.example.com/msp/keystore"),
-                new File("Resource/Org1User/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem"));
-
+        SampleOrg org1 = FabricConfig.getSampleOrg();
+        SampleUser admin = FabricConfig.getSampleUser(hfClient);
         org1.setPeerAdmin(admin);
-        hfclient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
-        hfclient.setUserContext(admin);
+
+        String channelName = "mychannel";
+        Channel channel = constructChannel(channelName, hfClient, org1, false);
+        chaincodeTest(hfClient, channel, org1, true);
     }
 
     public static void channelTest(String name, HFClient hfClient, SampleOrg org, SampleStore sampleStore) throws Exception {
         // construct channel
-        Channel channel = constructChannel(name, hfClient, org);
+        Channel channel = constructChannel(name, hfClient, org, true);
 
         // run channel
         sampleStore.saveChannel(channel);
     }
 
-    public static Channel constructChannel(String name, HFClient hfClient, SampleOrg org) throws Exception {
+    public static Channel constructChannel(String name, HFClient hfClient, SampleOrg org, boolean joinPeer) throws Exception {
         Collection<Orderer> orderers = new LinkedList<>();
 
         for(String orderName: org.getOrdererNames()){
@@ -77,6 +62,9 @@ public class App {
         assert admin!=null;
         Channel newChannel = hfClient.newChannel(name, anOrderer, channelConfiguration, hfClient.getChannelConfigurationSignature(channelConfiguration, admin));
 
+        if(!joinPeer){
+           return newChannel;
+        }
         for(String peerName: org.getPeerNames()){
             Peer peer = hfClient.newPeer(peerName, org.getPeerLocation(peerName));
             newChannel.joinPeer(peer, createPeerOptions().setPeerRoles(EnumSet.of(Peer.PeerRole.ENDORSING_PEER, Peer.PeerRole.LEDGER_QUERY, Peer.PeerRole.CHAINCODE_QUERY, Peer.PeerRole.EVENT_SOURCE)));
@@ -91,7 +79,7 @@ public class App {
         return newChannel;
     }
 
-    public static void chaincodeTest(HFClient client, Channel channel, SampleOrg org){
+    public static Boolean chaincodeTest(HFClient client, Channel channel, SampleOrg org, boolean installChaincode){
         class ChaincodeEventCapture{
             final String handle;
             final BlockEvent blockEvent;
@@ -111,98 +99,134 @@ public class App {
             System.out.println(String.format("Chaincode running at %s", channelName));
 
             System.out.println("-- Running GO Chaincode with own endorsement --");
-            final ChaincodeID chaincodeID;
-            Collection<ProposalResponse> responses = new LinkedList<>();
-            Collection<ProposalResponse> successful = new LinkedList<>();
-            Collection<ProposalResponse> failed = new LinkedList<>();
-
-            String chaincodeEventListenerHandle = channel.registerChaincodeEventListener(Pattern.compile(".*"),
-                    Pattern.compile(Pattern.quote(EXPECTED_EVENT_NAME)),
-                    (handle, blockEvent, chaincodeEvent) -> {
-                        chaincodeEvents.add(new ChaincodeEventCapture(handle, blockEvent, chaincodeEvent));
-
-                        String es = blockEvent.getPeer()!=null? blockEvent.getPeer().getName():"peer was null!!!";
-                        System.out.println(String.format("RECEIVED Chaincode event with handle: %s, chaincode Id: %s, chaincode event name: %s, "
-                                        + "transaction id: %s, event payload: \"%s\", from event source: %s",
-                                handle, chaincodeEvent.getChaincodeId(),
-                                chaincodeEvent.getEventName(),
-                                chaincodeEvent.getTxId(),
-                                new String(chaincodeEvent.getPayload()), es));
-                    });
-
-            ChaincodeID.Builder chaincodeIDBuilder = ChaincodeID.newBuilder().setName(CHAIN_CODE_NAME)
-                    .setVersion(CHAIN_CODE_VERSION);
-            chaincodeIDBuilder.setPath(CHAIN_CODE_PATH);
-            chaincodeID = chaincodeIDBuilder.build();
-
-            client.setUserContext(org.getPeerAdmin());
-            System.out.println("Creating install proposal");
-
-            InstallProposalRequest installProposalRequest = client.newInstallProposalRequest();
-            installProposalRequest.setChaincodeID(chaincodeID);
-
-            installProposalRequest.setChaincodeSourceLocation(new File(CHAIN_CODE_PATH));
-
-            if (CHAIN_CODE_LANG.equals(TransactionRequest.Type.GO_LANG)) {
-
-                installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
-                        (Paths.get(CHAIN_CODE_FILEPATH, "src", CHAIN_CODE_PATH).toFile()),
-                        Paths.get("src", CHAIN_CODE_PATH).toString()));
-            } else {
-                installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
-                        (Paths.get(CHAIN_CODE_FILEPATH).toFile()),
-                        "src"));
-            }
-
-            installProposalRequest.setChaincodeVersion(CHAIN_CODE_VERSION);
-            installProposalRequest.setChaincodeLanguage(CHAIN_CODE_LANG);
-
-            System.out.println("Sending install proposal");
-
-            int numInstallProposal = 0;
-
-            Collection<Peer> peers = channel.getPeers();
-
-            numInstallProposal = numInstallProposal + peers.size();
-
-            responses = client.sendInstallProposal(installProposalRequest, peers);
-
-            for (ProposalResponse response : responses) {
-                if (response.getStatus() == ProposalResponse.Status.SUCCESS) {
-                    System.out.printf("Successful install proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName());
-                    successful.add(response);
-                } else {
-                    failed.add(response);
+            final ChaincodeID chaincodeID = chaincodeInit();;
+            if(installChaincode){
+                client.setUserContext(org.getPeerAdmin());
+                System.out.println("Creating install proposal");
+                InstallProposalRequest installProposalRequest = installChaincodeProposalRequestInit(client, chaincodeID);
+                System.out.println("Sending install proposal");
+                Collection<Peer> peers = channel.getPeers();
+                int numInstallProposal = 0;
+                numInstallProposal = numInstallProposal + peers.size();
+                boolean ret = sendChaincodeInstallProposalRequest(client, installProposalRequest, peers, numInstallProposal);
+                if(!ret){
+                    return false;
                 }
+
+                String functionName = "createCar";
+                String[] functionArgs = new String[]{"CAR1", "Chevy", "Volt", "Red", "Nick"};
+                String policyPath = "Resource/chaincodeendorsementpolicy.yaml";
+                InstantiateProposalRequest instantiateProposalRequest = instantiateChaincodeProposalRequestInit(client, chaincodeID, functionName, functionArgs, policyPath);
+                ret = sendChaincodeInstantiateProposalRequest(channel, instantiateProposalRequest);
+                if(!ret){
+                    return false;
+                }
+                // TODO send instantiateTransaction to orderer
+
             }
 
-            System.out.printf("Received %d install proposal responses. Successful+verified: %d . Failed: %d", numInstallProposal, successful.size(), failed.size());
-
-            if (failed.size() > 0) {
-                ProposalResponse first = failed.iterator().next();
-                fail("Not enough endorsers for install :" + successful.size() + ".  " + first.getMessage());
-            }
         }catch (Exception e){
-
+            e.printStackTrace();
+            return false;
         }
+
+        return true;
     }
 
-    private static File findFileSk(String directorys) {
+    private static ChaincodeID chaincodeInit(){
+        ChaincodeID.Builder chaincodeIDBuilder = ChaincodeID.newBuilder().setName(CHAIN_CODE_NAME)
+                .setVersion(CHAIN_CODE_VERSION);
+        chaincodeIDBuilder.setPath(CHAIN_CODE_PATH);
+        return chaincodeIDBuilder.build();
+    }
 
-        File directory = new File(directorys);
-        System.out.printf(String.valueOf(directory.exists()));
+    private static InstallProposalRequest installChaincodeProposalRequestInit(HFClient client, ChaincodeID chaincodeID) throws Exception{
+        InstallProposalRequest installProposalRequest = client.newInstallProposalRequest();
+        installProposalRequest.setChaincodeID(chaincodeID);
 
-        File[] matches = directory.listFiles((dir, name) -> name.endsWith("_sk"));
+        installProposalRequest.setChaincodeSourceLocation(Paths.get(CHAIN_CODE_FILEPATH).toFile());
 
-        if (null == matches) {
-            throw new RuntimeException(format("Matches returned null does %s directory exist?", directory.getAbsoluteFile().getName()));
+        if (CHAIN_CODE_LANG.equals(TransactionRequest.Type.GO_LANG)) {
+
+            installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
+                    (Paths.get(CHAIN_CODE_FILEPATH, "src", CHAIN_CODE_PATH).toFile()),
+                    Paths.get("src", CHAIN_CODE_PATH).toString()));
+        } else {
+            installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
+                    (Paths.get(CHAIN_CODE_FILEPATH).toFile()),
+                    "src"));
         }
 
-        if (matches.length != 1) {
-            throw new RuntimeException(format("Expected in %s only 1 sk file but found %d", directory.getAbsoluteFile().getName(), matches.length));
+        installProposalRequest.setChaincodeVersion(CHAIN_CODE_VERSION);
+        installProposalRequest.setChaincodeLanguage(CHAIN_CODE_LANG);
+        return installProposalRequest;
+    }
+
+    private static boolean sendChaincodeInstallProposalRequest(HFClient client, InstallProposalRequest installProposalRequest, Collection<Peer> peers, int numInstallProposal) throws Exception{
+        Collection<ProposalResponse> successful = new LinkedList<>();
+        Collection<ProposalResponse> failed = new LinkedList<>();
+        Collection<ProposalResponse> responses = client.sendInstallProposal(installProposalRequest, peers);
+
+        for (ProposalResponse response : responses) {
+            if (response.getStatus() == ProposalResponse.Status.SUCCESS) {
+                System.out.printf("Successful install proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName());
+                successful.add(response);
+            } else {
+                failed.add(response);
+            }
         }
 
-        return matches[0];
+        System.out.printf("Received %d install proposal responses. Successful+verified: %d . Failed: %d", numInstallProposal, successful.size(), failed.size());
 
+        if (failed.size() > 0) {
+            ProposalResponse first = failed.iterator().next();
+            System.out.print("Not enough endorsers for install :" + successful.size() + ".  " + first.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private static InstantiateProposalRequest instantiateChaincodeProposalRequestInit(HFClient client, ChaincodeID chaincodeID, String functionName, String[] functionArgs, String policyPath) throws IOException, InvalidArgumentException, ChaincodeEndorsementPolicyParseException {
+        InstantiateProposalRequest instantiateProposalRequest = client.newInstantiationProposalRequest();
+        instantiateProposalRequest.setProposalWaitTime(180000);
+        instantiateProposalRequest.setChaincodeID(chaincodeID);
+        instantiateProposalRequest.setChaincodeLanguage(CHAIN_CODE_LANG);
+        instantiateProposalRequest.setFcn(functionName);
+        instantiateProposalRequest.setArgs(functionArgs);
+
+        Map<String, byte[]> tm = new HashMap<>();
+        tm.put("HyperLedgerFabric", "InstantiateProposalRequest:JavaSDK".getBytes(UTF_8));
+        tm.put("method", "InstantiateProposalRequest".getBytes(UTF_8));
+        instantiateProposalRequest.setTransientMap(tm);
+
+        ChaincodeEndorsementPolicy chaincodeEndorsementPolicy = new ChaincodeEndorsementPolicy();
+        chaincodeEndorsementPolicy.fromYamlFile(new File(policyPath));
+        instantiateProposalRequest.setChaincodeEndorsementPolicy(chaincodeEndorsementPolicy);
+
+        System.out.print("Sending instantiateProposalRequest to all peers with arguments");
+
+        return instantiateProposalRequest;
+    }
+
+    private static boolean sendChaincodeInstantiateProposalRequest(Channel channel, InstantiateProposalRequest instantiateProposalRequest) throws ProposalException, InvalidArgumentException {
+        Collection<ProposalResponse> successful = new LinkedList<>();
+        Collection<ProposalResponse> failed = new LinkedList<>();
+        Collection<ProposalResponse> responses = channel.sendInstantiationProposal(instantiateProposalRequest, channel.getPeers());
+
+        for(ProposalResponse response: responses){
+            if(response.isVerified() && response.getStatus() == ProposalResponse.Status.SUCCESS){
+                successful.add(response);
+                System.out.printf("Successfully instantiate proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName());
+            }
+            else{
+                failed.add(response);
+            }
+        }
+
+        if(failed.size() > 0){
+            System.out.print("Not enough endorses for instantiate");
+            return false;
+        }
+        return true;
     }
 }
