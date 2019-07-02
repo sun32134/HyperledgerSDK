@@ -7,33 +7,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
 public class FabricConfig {
     private static final Logger logger = LoggerFactory.getLogger(FabricConfig.class);
 
-    public static SampleOrg getSampleOrg(){
+    public static SampleOrg getSampleOrg1(){
         SampleOrg org1 = new SampleOrg("peerOrg1", "Org1MSP");
         org1.setDomainName("org1.example.com");
 
@@ -46,27 +31,44 @@ public class FabricConfig {
         return org1;
     }
 
-    public static SampleUser getSampleUser(HFClient hfclient) throws IllegalAccessException, InvocationTargetException, InvalidArgumentException, InstantiationException, NoSuchMethodException, CryptoException, ClassNotFoundException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
-        SampleOrg org1 = FabricConfig.getSampleOrg();
+    public static SampleOrg getSampleOrg2(){
+        SampleOrg org1 = new SampleOrg("peerOrg2", "Org2MSP");
+        org1.setDomainName("org2.example.com");
+
+        org1.setCAName("ca_peerOrg2");
+        org1.setCALocation("http://192.168.1.164:8054");
+
+        org1.addPeerLocation("peer0.org2.example.com", "grpc://192.168.1.164:8051");
+        org1.addPeerLocation("peer1.org2.example.com", "grpc://192.168.1.164:8056");
+        org1.addOrdererLocation("orderer.example.com", "grpc://192.168.1.164:7050");
+        return org1;
+    }
+
+    public static SampleUser getAdminUser1(HFClient hfclient) throws IllegalAccessException, InvocationTargetException, InvalidArgumentException, InstantiationException, NoSuchMethodException, CryptoException, ClassNotFoundException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
+        SampleOrg org1 = FabricConfig.getSampleOrg1();
         File sampleStoreFile = new File(System.getProperty("user.home") + "/test.properties");
-        if (sampleStoreFile.exists()) { //For testing start fresh
-            sampleStoreFile.delete();
-        }
 
         final SampleStore sampleStore = new SampleStore(sampleStoreFile);
 
-        SampleUser admin = sampleStore.getMember("admin", org1.getName(), org1.getMSPID(),
+        SampleUser admin = sampleStore.getMember("admin1", org1.getName(), org1.getMSPID(),
                 findFileSk("Resource/Org1User/Admin@org1.example.com/msp/keystore"),
                 new File("Resource/Org1User/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem"));
         hfclient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         hfclient.setUserContext(admin);
-
         return admin;
     }
 
-    public static Channel getChannel(HFClient hfclient, String channelName, SampleOrg org) throws InvalidArgumentException {
+    public static SampleUser getAdminUser2(HFClient hfclient) throws IllegalAccessException, InvocationTargetException, InvalidArgumentException, InstantiationException, NoSuchMethodException, CryptoException, ClassNotFoundException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
+        SampleOrg org2 = FabricConfig.getSampleOrg2();
+        File sampleStoreFile = new File(System.getProperty("user.home") + "/test.properties");
+        final SampleStore sampleStore = new SampleStore(sampleStoreFile);
 
-        return hfclient.newChannel(channelName);
+        SampleUser admin = sampleStore.getMember("admin2", org2.getName(), org2.getMSPID(),
+                findFileSk("Resource/Org2User/Admin@org2.example.com/msp/keystore"),
+                new File("Resource/Org2User/Admin@org2.example.com/msp/signcerts/Admin@org2.example.com-cert.pem"));
+        hfclient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        hfclient.setUserContext(admin);
+        return admin;
     }
 
     private static File findFileSk(String directorys) {

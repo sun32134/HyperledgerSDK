@@ -1,25 +1,31 @@
 
-import jdk.nashorn.internal.runtime.linker.Bootstrap;
+import org.apache.commons.math3.geometry.partitioning.BSPTreeVisitor;
+import org.hyperledger.fabric.protos.common.MspPrincipal;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.ProposalException;
+import org.hyperledger.fabric.sdk.security.CryptoSuite;
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hyperledger.fabric.sdk.Channel.PeerOptions.createPeerOptions;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 public class App {
 
     private static final String EXPECTED_EVENT_NAME = "event";
+    private static final byte[] EXPECTED_EVENT_DATA = "!".getBytes(UTF_8);
 
     final static String CHAIN_CODE_FILEPATH = "Resource/Chaincode";
     final static String CHAIN_CODE_PATH = "github.com/fabcar";
@@ -28,78 +34,72 @@ public class App {
     final static TransactionRequest.Type CHAIN_CODE_LANG = TransactionRequest.Type.GO_LANG;
 
     public static void main(String[] argv) throws Exception {
+        // 初始化client
         HFClient hfClient = HFClient.createNewInstance();
-        SampleOrg org1 = FabricConfig.getSampleOrg();
-        SampleUser admin = FabricConfig.getSampleUser(hfClient);
-        org1.setPeerAdmin(admin);
+        HFClient hfClient2 = HFClient.createNewInstance();
+        hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        hfClient2.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
 
-        String channelName = "mychannel";
-        Channel channel = constructChannel(channelName, hfClient, org1, false);
-        chaincodeTest(hfClient, channel, org1, true);
-    }
+        SampleUser admin1 = FabricConfig.getAdminUser1(hfClient);
+        SampleUser admin2 = FabricConfig.getAdminUser2(hfClient2);
+        SampleOrg org1 = FabricConfig.getSampleOrg1();
+        SampleOrg org2 = FabricConfig.getSampleOrg2();
+        org1.setPeerAdmin(admin1);
+        org2.setPeerAdmin(admin2);
 
-    public static void channelTest(String name, HFClient hfClient, SampleOrg org, SampleStore sampleStore) throws Exception {
-        // construct channel
-        Channel channel = constructChannel(name, hfClient, org, true);
 
-        // run channel
-        sampleStore.saveChannel(channel);
-    }
-
-    public static Channel constructChannel(String name, HFClient hfClient, SampleOrg org, boolean joinPeer) throws Exception {
         Collection<Orderer> orderers = new LinkedList<>();
-
-        for(String orderName: org.getOrdererNames()){
-            orderers.add(hfClient.newOrderer(orderName, org.getOrdererLocation(orderName)));
+        for(String ordererName: org1.getOrdererNames()){
+            hfClient2.newOrderer(ordererName, org2.getOrdererLocation(ordererName));
+            orderers.add(hfClient.newOrderer(ordererName, org1.getOrdererLocation(ordererName)));
         }
-        Orderer anOrderer = orderers.iterator().next();
-        orderers.remove(anOrderer);
-
-        String channelConfig = "Resource/channel.tx";
-        ChannelConfiguration channelConfiguration = new ChannelConfiguration(new File(channelConfig));
-
-        SampleUser admin = org.getPeerAdmin();
-        assert admin!=null;
-        Channel newChannel = hfClient.newChannel(name, anOrderer, channelConfiguration, hfClient.getChannelConfigurationSignature(channelConfiguration, admin));
-
-        if(!joinPeer){
-           return newChannel;
+        Collection<Peer> peers = new LinkedList<>();
+        Collection<Peer> peers2 = new LinkedList<>();
+        for(String peerName: org1.getPeerNames()){
+            peers.add(hfClient.newPeer(peerName, org1.getPeerLocation(peerName)));
         }
-        for(String peerName: org.getPeerNames()){
-            Peer peer = hfClient.newPeer(peerName, org.getPeerLocation(peerName));
-            newChannel.joinPeer(peer, createPeerOptions().setPeerRoles(EnumSet.of(Peer.PeerRole.ENDORSING_PEER, Peer.PeerRole.LEDGER_QUERY, Peer.PeerRole.CHAINCODE_QUERY, Peer.PeerRole.EVENT_SOURCE)));
+        for(String peerName: org2.getPeerNames()){
+            peers2.add(hfClient2.newPeer(peerName, org2.getPeerLocation(peerName)));
         }
 
-        for(Orderer orderer: orderers){
-            newChannel.addOrderer(orderer);
-        }
+        /**
+         * 第二步：从配置文件中读取Channel，之后的步骤不用将代码注释
+         * */
+        Channel channel = ChannelFactory.fromSampleStore(hfClient);
+        Channel channel2 = ChannelFactory.fromSampleStore(hfClient2);
 
-        newChannel.initialize();
+        /**
+         * 第一步：使用Org1的Client新建channel，之后将Org2的节点加入该channel, 之后将这段代码注释，进行第二部
+         * */
+//        Channel channel = ChannelFactory.constructChannel("mychannel", admin1, hfClient, orderers, peers);
+//        ChannelFactory.joinChannel(channel, peers2);
+        /**
+         * 第三步：install链码，之后将代码注释，进行第四步
+         * */
+//        installChaincode(hfClient, channel, org1, true);
+//        installChaincode(hfClient2, channel2, org2, true);
 
-        return newChannel;
+
+        ChaincodeID chaincodeID = chaincodeInit();
+        /**
+         * 第四步：实例化链码
+         * */
+//        instantiateChaincode(hfClient, chaincodeID, channel);
+        /**
+         * 第五步：调用链码
+         * */
+        invodeChaincode(hfClient, channel, chaincodeID);
     }
 
-    public static Boolean chaincodeTest(HFClient client, Channel channel, SampleOrg org, boolean installChaincode){
-        class ChaincodeEventCapture{
-            final String handle;
-            final BlockEvent blockEvent;
-            final ChaincodeEvent chaincodeEvent;
 
-            ChaincodeEventCapture(String handle, BlockEvent blockEvent, ChaincodeEvent chaincodeEvent) {
-                this.handle = handle;
-                this.blockEvent = blockEvent;
-                this.chaincodeEvent = chaincodeEvent;
-            }
-        }
 
-        Vector<ChaincodeEventCapture> chaincodeEvents = new Vector<>();
-
+    public static Boolean installChaincode(HFClient client, Channel channel, SampleOrg org, boolean installChaincode){
         try {
             final String channelName = channel.getName();
             System.out.println(String.format("Chaincode running at %s", channelName));
 
             System.out.println("-- Running GO Chaincode with own endorsement --");
-            final ChaincodeID chaincodeID = chaincodeInit();;
+            final ChaincodeID chaincodeID = chaincodeInit();
             if(installChaincode){
                 client.setUserContext(org.getPeerAdmin());
                 System.out.println("Creating install proposal");
@@ -109,20 +109,9 @@ public class App {
                 int numInstallProposal = 0;
                 numInstallProposal = numInstallProposal + peers.size();
                 boolean ret = sendChaincodeInstallProposalRequest(client, installProposalRequest, peers, numInstallProposal);
-                if(!ret){
+                if(!ret) {
                     return false;
                 }
-
-                String functionName = "createCar";
-                String[] functionArgs = new String[]{"CAR1", "Chevy", "Volt", "Red", "Nick"};
-                String policyPath = "Resource/chaincodeendorsementpolicy.yaml";
-                InstantiateProposalRequest instantiateProposalRequest = instantiateChaincodeProposalRequestInit(client, chaincodeID, functionName, functionArgs, policyPath);
-                ret = sendChaincodeInstantiateProposalRequest(channel, instantiateProposalRequest);
-                if(!ret){
-                    return false;
-                }
-                // TODO send instantiateTransaction to orderer
-
             }
 
         }catch (Exception e){
@@ -132,6 +121,59 @@ public class App {
 
         return true;
     }
+
+    public static void queryChaincode(HFClient hfClient, Channel channel, ChaincodeID chaincodeID, String functionName, String[] args) throws ProposalException, InvalidArgumentException {
+        QueryByChaincodeRequest queryByChaincodeRequest = hfClient.newQueryProposalRequest();
+        queryByChaincodeRequest.setChaincodeID(chaincodeID);
+        queryByChaincodeRequest.setFcn(functionName);
+        if(args != null){
+            queryByChaincodeRequest.setArgs(args);
+        }
+        Collection<ProposalResponse> response = channel.queryByChaincode(queryByChaincodeRequest);
+        for (ProposalResponse pres : response) {
+            String stringResponse = new String(pres.getChaincodeActionResponsePayload());
+           System.out.println(stringResponse);
+        }
+    }
+
+    public static void invodeChaincode(HFClient hfClient, Channel channel, ChaincodeID chaincodeID) throws InvalidArgumentException, ProposalException {
+        TransactionProposalRequest transactionProposalRequest = initTransactionProposalRequest(hfClient, chaincodeID,channel);
+        sendTransactionProposalRequest(channel, transactionProposalRequest);
+    }
+
+    private static TransactionProposalRequest initTransactionProposalRequest(HFClient client, ChaincodeID chaincodeID, Channel channel) throws InvalidArgumentException {
+        TransactionProposalRequest transactionProposalRequest = client.newTransactionProposalRequest();
+        transactionProposalRequest.setChaincodeID(chaincodeID);
+        transactionProposalRequest.setChaincodeLanguage(CHAIN_CODE_LANG);
+        transactionProposalRequest.setFcn("initLedger");
+        transactionProposalRequest.setProposalWaitTime(1000);
+        Map<String, byte[]> tm2 = new HashMap<>();
+        tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8)); //Just some extra junk in transient map
+        tm2.put("method", "TransactionProposalRequest".getBytes(UTF_8)); // ditto
+        tm2.put("result", ":)".getBytes(UTF_8));  // This should be returned in the payload see chaincode why.
+        transactionProposalRequest.setTransientMap(tm2);
+        return transactionProposalRequest;
+    }
+
+    private static boolean sendTransactionProposalRequest(Channel channel, TransactionProposalRequest transactionProposalRequest) throws InvalidArgumentException, ProposalException {
+        Collection<ProposalResponse> transactionPropResp = channel.sendTransactionProposal(transactionProposalRequest, channel.getPeers());
+        Collection<ProposalResponse> successful = new LinkedList<>();
+        Collection<ProposalResponse> failed = new LinkedList<>();
+        for (ProposalResponse response : transactionPropResp) {
+            if (response.getStatus() == ProposalResponse.Status.SUCCESS) {
+                System.out.println(String.format("Successful transaction proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName()));
+                successful.add(response);
+            } else {
+                failed.add(response);
+            }
+        }
+        if(failed.size() > 0){
+            return false;
+        }
+        CompletableFuture<BlockEvent.TransactionEvent> cf = channel.sendTransaction(transactionPropResp);
+        return true;
+    }
+
 
     private static ChaincodeID chaincodeInit(){
         ChaincodeID.Builder chaincodeIDBuilder = ChaincodeID.newBuilder().setName(CHAIN_CODE_NAME)
@@ -145,17 +187,6 @@ public class App {
         installProposalRequest.setChaincodeID(chaincodeID);
 
         installProposalRequest.setChaincodeSourceLocation(Paths.get(CHAIN_CODE_FILEPATH).toFile());
-
-        if (CHAIN_CODE_LANG.equals(TransactionRequest.Type.GO_LANG)) {
-
-            installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
-                    (Paths.get(CHAIN_CODE_FILEPATH, "src", CHAIN_CODE_PATH).toFile()),
-                    Paths.get("src", CHAIN_CODE_PATH).toString()));
-        } else {
-            installProposalRequest.setChaincodeInputStream(Util.generateTarGzInputStream(
-                    (Paths.get(CHAIN_CODE_FILEPATH).toFile()),
-                    "src"));
-        }
 
         installProposalRequest.setChaincodeVersion(CHAIN_CODE_VERSION);
         installProposalRequest.setChaincodeLanguage(CHAIN_CODE_LANG);
@@ -186,6 +217,13 @@ public class App {
         return true;
     }
 
+    private static Boolean instantiateChaincode(HFClient client, ChaincodeID chaincodeID, Channel channel) throws ChaincodeEndorsementPolicyParseException, IOException, InvalidArgumentException, ProposalException {
+        String functionName = "initLedger";
+        String[] arguments = { "" };
+        InstantiateProposalRequest instantiateProposalRequest = instantiateChaincodeProposalRequestInit(client, chaincodeID, functionName, arguments, null);
+        return sendChaincodeInstantiateProposalRequest(channel, instantiateProposalRequest);
+    }
+
     private static InstantiateProposalRequest instantiateChaincodeProposalRequestInit(HFClient client, ChaincodeID chaincodeID, String functionName, String[] functionArgs, String policyPath) throws IOException, InvalidArgumentException, ChaincodeEndorsementPolicyParseException {
         InstantiateProposalRequest instantiateProposalRequest = client.newInstantiationProposalRequest();
         instantiateProposalRequest.setProposalWaitTime(180000);
@@ -199,12 +237,12 @@ public class App {
         tm.put("method", "InstantiateProposalRequest".getBytes(UTF_8));
         instantiateProposalRequest.setTransientMap(tm);
 
-        ChaincodeEndorsementPolicy chaincodeEndorsementPolicy = new ChaincodeEndorsementPolicy();
-        chaincodeEndorsementPolicy.fromYamlFile(new File(policyPath));
-        instantiateProposalRequest.setChaincodeEndorsementPolicy(chaincodeEndorsementPolicy);
-
-        System.out.print("Sending instantiateProposalRequest to all peers with arguments");
-
+        if(policyPath != null){
+            ChaincodeEndorsementPolicy chaincodeEndorsementPolicy = new ChaincodeEndorsementPolicy();
+            chaincodeEndorsementPolicy.fromYamlFile(new File(policyPath));
+            instantiateProposalRequest.setChaincodeEndorsementPolicy(chaincodeEndorsementPolicy);
+        }
+        instantiateProposalRequest.setProposalWaitTime(180000);
         return instantiateProposalRequest;
     }
 
@@ -212,7 +250,10 @@ public class App {
         Collection<ProposalResponse> successful = new LinkedList<>();
         Collection<ProposalResponse> failed = new LinkedList<>();
         Collection<ProposalResponse> responses = channel.sendInstantiationProposal(instantiateProposalRequest, channel.getPeers());
+        System.out.print("Sending instantiateProposalRequest to all peers with arguments");
+        CompletableFuture<BlockEvent.TransactionEvent> cf = channel.sendTransaction(responses);
 
+        System.out.println("Chaincode " + instantiateProposalRequest.getChaincodeName() + " on channel " + channel.getName() + " instantiation " + cf);
         for(ProposalResponse response: responses){
             if(response.isVerified() && response.getStatus() == ProposalResponse.Status.SUCCESS){
                 successful.add(response);
@@ -227,6 +268,7 @@ public class App {
             System.out.print("Not enough endorses for instantiate");
             return false;
         }
+
         return true;
     }
 }
