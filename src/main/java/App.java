@@ -1,26 +1,17 @@
 
-import org.apache.commons.math3.geometry.partitioning.BSPTreeVisitor;
-import org.hyperledger.fabric.protos.common.MspPrincipal;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.ProposalException;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
-import org.omg.Messaging.SYNC_WITH_TRANSPORT;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hyperledger.fabric.sdk.Channel.PeerOptions.createPeerOptions;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertTrue;
+
 
 public class App {
 
@@ -66,7 +57,7 @@ public class App {
          * 第二步：从配置文件中读取Channel，之后的步骤不用将代码注释
          * */
         Channel channel = ChannelFactory.fromSampleStore(hfClient);
-        Channel channel2 = ChannelFactory.fromSampleStore(hfClient2);
+//        Channel channel2 = ChannelFactory.fromSampleStore(hfClient2);
 
         /**
          * 第一步：使用Org1的Client新建channel，之后将Org2的节点加入该channel, 之后将这段代码注释，进行第二部
@@ -88,7 +79,12 @@ public class App {
         /**
          * 第五步：调用链码
          * */
-        invodeChaincode(hfClient, channel, chaincodeID);
+        // invodeChaincode(hfClient, channel, chaincodeID);
+
+        /**
+         * 第六步：查询链码
+         * */
+        queryChaincode(hfClient, channel, chaincodeID);
     }
 
 
@@ -122,17 +118,14 @@ public class App {
         return true;
     }
 
-    public static void queryChaincode(HFClient hfClient, Channel channel, ChaincodeID chaincodeID, String functionName, String[] args) throws ProposalException, InvalidArgumentException {
+    public static void queryChaincode(HFClient hfClient, Channel channel, ChaincodeID chaincodeID) throws ProposalException, InvalidArgumentException {
         QueryByChaincodeRequest queryByChaincodeRequest = hfClient.newQueryProposalRequest();
         queryByChaincodeRequest.setChaincodeID(chaincodeID);
-        queryByChaincodeRequest.setFcn(functionName);
-        if(args != null){
-            queryByChaincodeRequest.setArgs(args);
-        }
+        queryByChaincodeRequest.setFcn("queryAllCars");
         Collection<ProposalResponse> response = channel.queryByChaincode(queryByChaincodeRequest);
         for (ProposalResponse pres : response) {
             String stringResponse = new String(pres.getChaincodeActionResponsePayload());
-           System.out.println(stringResponse);
+            System.out.println(stringResponse);
         }
     }
 

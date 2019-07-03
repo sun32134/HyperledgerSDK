@@ -1,0 +1,16 @@
+CORE_PEER_LOCALMSPID=Org1MSP
+CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp
+peer channel create -o orderer.example.com:7050 -c mychannel -f /etc/hyperledger/configtx/channel.tx
+
+CORE_PEER_LOCALMSPID=Org2MSP
+CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp
+peer channel join -b /mychannel.block 
+
+
+peer chaincode install -n mycc -p github.com/chaincode/src/github.com/fabcar -v v0
+
+peer chaincode instantiate -o orderer.example.com:7050 -C mychannel -n mycc github.com/chaincode/src/github.com/fabcar -v v0 -c '{"Args": [""]}'
+
+µ÷ÓÃfabcar
+peer chaincode invoke -o orderer.example.com:7050 -n mycc -c '{"Args":["initLedger"]}' -C mychannel
+peer chaincode invoke -o orderer.example.com:7050 -n mycc -c '{"Args":["queryAllCars"]}' -C mychannel
