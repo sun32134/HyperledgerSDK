@@ -1,4 +1,8 @@
-import org.hyperledger.fabric.sdk.Channel;
+package test;
+
+import Sample.SampleOrg;
+import Sample.SampleStore;
+import Sample.SampleUser;
 import org.hyperledger.fabric.sdk.HFClient;
 import org.hyperledger.fabric.sdk.exception.CryptoException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
@@ -71,7 +75,7 @@ public class FabricConfig {
         return admin;
     }
 
-    private static File findFileSk(String directorys) {
+    public static File findFileSk(String directorys) {
 
         File directory = new File(directorys);
         System.out.printf(String.valueOf(directory.exists()));

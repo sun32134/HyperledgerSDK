@@ -1,4 +1,4 @@
-/*
+package Sample;/*
  *  Copyright 2016 DTCC, Fujitsu Australia Software Technology - All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,10 +25,6 @@ import org.bouncycastle.util.encoders.Hex;
 import org.hyperledger.fabric.sdk.Enrollment;
 import org.hyperledger.fabric.sdk.User;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
-import org.hyperledger.fabric_ca.sdk.EnrollmentRequest;
-import org.hyperledger.fabric_ca.sdk.HFCAClient;
-import org.hyperledger.fabric_ca.sdk.exception.EnrollmentException;
-import org.hyperledger.fabric_ca.sdk.exception.InvalidArgumentException;
 
 
 public class SampleUser implements User, Serializable {

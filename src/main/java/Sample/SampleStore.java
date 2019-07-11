@@ -1,34 +1,4 @@
-/*
- *  Copyright 2016, 2017 DTCC, Fujitsu Australia Software Technology, IBM - All Rights Reserved.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *        http://www.apache.org/licenses/LICENSE-2.0
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Reader;
-import java.io.Serializable;
-import java.io.StringReader;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.Security;
-import java.security.spec.InvalidKeySpecException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+package Sample;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -43,6 +13,16 @@ import org.hyperledger.fabric.sdk.Enrollment;
 import org.hyperledger.fabric.sdk.HFClient;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
+
+import java.io.*;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.Security;
+import java.security.spec.InvalidKeySpecException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * A local file-based key value store.
@@ -125,13 +105,13 @@ public class SampleStore {
      */
     public SampleUser getMember(String name, String org) {
 
-        // Try to get the SampleUser state from the cache
+        // Try to get the Sample.SampleUser state from the cache
         SampleUser sampleUser = members.get(SampleUser.toKeyValStoreName(name, org));
         if (null != sampleUser) {
             return sampleUser;
         }
 
-        // Create the SampleUser and try to restore it's state from the key value store (if found).
+        // Create the Sample.SampleUser and try to restore it's state from the key value store (if found).
         sampleUser = new SampleUser(name, org, this, cryptoSuite);
 
         return sampleUser;
@@ -147,7 +127,7 @@ public class SampleStore {
      */
     public boolean hasMember(String name, String org) {
 
-        // Try to get the SampleUser state from the cache
+        // Try to get the Sample.SampleUser state from the cache
 
         if (members.containsKey(SampleUser.toKeyValStoreName(name, org))) {
             return true;
@@ -174,13 +154,13 @@ public class SampleStore {
                                 File certificateFile) throws IOException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
 
         try {
-            // Try to get the SampleUser state from the cache
+            // Try to get the Sample.SampleUser state from the cache
             SampleUser sampleUser = members.get(SampleUser.toKeyValStoreName(name, org));
             if (null != sampleUser) {
                 return sampleUser;
             }
 
-            // Create the SampleUser and try to restore it's state from the key value store (if found).
+            // Create the Sample.SampleUser and try to restore it's state from the key value store (if found).
             sampleUser = new SampleUser(name, org, this, cryptoSuite);
             sampleUser.setMspId(mspId);
 
@@ -211,6 +191,24 @@ public class SampleStore {
             throw e;
         }
 
+    }
+
+    public SampleUser getMember(String name, String org, String mspId, Enrollment enrollment){
+        // Try to get the Sample.SampleUser state from the cache
+        SampleUser sampleUser = members.get(SampleUser.toKeyValStoreName(name, org));
+        if (null != sampleUser) {
+            return sampleUser;
+        }
+
+        // Create the Sample.SampleUser and try to restore it's state from the key value store (if found).
+        sampleUser = new SampleUser(name, org, this, cryptoSuite);
+        sampleUser.setMspId(mspId);
+
+        sampleUser.setEnrollment(enrollment);
+
+        sampleUser.saveState();
+
+        return sampleUser;
     }
 
     static {
@@ -257,13 +255,13 @@ public class SampleStore {
 
     }
 
-    void saveChannel(Channel channel) throws IOException, InvalidArgumentException {
+    public void saveChannel(Channel channel) throws IOException, InvalidArgumentException {
 
         setValue("channel." + channel.getName(), Hex.toHexString(channel.serializeChannel()));
 
     }
 
-    Channel getChannel(HFClient client, String name) throws IOException, ClassNotFoundException, InvalidArgumentException {
+    public Channel getChannel(HFClient client, String name) throws IOException, ClassNotFoundException, InvalidArgumentException {
         Channel ret = null;
 
         String channelHex = getValue("channel." + name);

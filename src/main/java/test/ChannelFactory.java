@@ -1,3 +1,8 @@
+package test;
+
+import Sample.SampleOrg;
+import Sample.SampleStore;
+import Sample.SampleUser;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.ProposalException;
@@ -5,8 +10,7 @@ import org.hyperledger.fabric.sdk.exception.TransactionException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.EnumSet;
+import java.util.*;
 
 
 import static org.hyperledger.fabric.sdk.Channel.PeerOptions.createPeerOptions;

@@ -1,4 +1,7 @@
+package test;
 
+import Sample.SampleOrg;
+import Sample.SampleUser;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
@@ -57,13 +60,13 @@ public class App {
          * 第二步：从配置文件中读取Channel，之后的步骤不用将代码注释
          * */
         Channel channel = ChannelFactory.fromSampleStore(hfClient);
-//        Channel channel2 = ChannelFactory.fromSampleStore(hfClient2);
+//        Channel channel2 = test.ChannelFactory.fromSampleStore(hfClient2);
 
         /**
          * 第一步：使用Org1的Client新建channel，之后将Org2的节点加入该channel, 之后将这段代码注释，进行第二部
          * */
-//        Channel channel = ChannelFactory.constructChannel("mychannel", admin1, hfClient, orderers, peers);
-//        ChannelFactory.joinChannel(channel, peers2);
+//        Channel channel = test.ChannelFactory.constructChannel("mychannel", admin1, hfClient, orderers, peers);
+//        test.ChannelFactory.joinChannel(channel, peers2);
         /**
          * 第三步：install链码，之后将代码注释，进行第四步
          * */
@@ -86,8 +89,6 @@ public class App {
          * */
         queryChaincode(hfClient, channel, chaincodeID);
     }
-
-
 
     public static Boolean installChaincode(HFClient client, Channel channel, SampleOrg org, boolean installChaincode){
         try {

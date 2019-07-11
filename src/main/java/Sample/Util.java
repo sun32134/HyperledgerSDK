@@ -1,4 +1,4 @@
-/*
+package Sample;/*
  *
  *  Copyright 2016,2017 DTCC, Fujitsu Australia Software Technology, IBM - All Rights Reserved.
  *
@@ -32,7 +32,7 @@ import org.hyperledger.fabric.sdk.helper.Utils;
 
 import static java.lang.String.format;
 
-class Util {
+public class Util {
 
     /**
      * Private constructor to prevent instantiation.
