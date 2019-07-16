@@ -6,7 +6,7 @@ description: "The network config"
 client:
   # Which organization does this application instance belong to? The value must be the name of an org
   # defined under "organizations"
-  organization: Org2
+  organization: Org1
 
   # Some SDKs support pluggable KV stores, the properties under "credentialStore"
   # are implementation specific
@@ -14,14 +14,14 @@ client:
     # [Optional]. Specific to FileKeyValueStore.js or similar implementations in other SDKs. Can be others
     # if using an alternative impl. For instance, CouchDBKeyValueStore.js would require an object
     # here for properties like url, db name, etc.
-    path: "Org2User"
+    path: "Org1User"
 
     # [Optional]. Specific to the CryptoSuite implementation. Software-based implementations like
     # CryptoSuite_ECDSA_AES.js in node SDK requires a key store. PKCS#11 based implementations does
     # not.
     cryptoStore:
       # Specific to the underlying KeyValueStore that backs the crypto key store.
-      path: "Org2User"
+      path: "Org1User"
 
     # [Optional]. Specific to Composer environment
     wallet: wallet-name
@@ -53,7 +53,7 @@ channels:
         ledgerQuery: true
         eventSource: true
     chaincodes:
-      - fabcar:v1
+      - fabcar:v2
 
 organizations:
   Org1:
@@ -118,3 +118,11 @@ certificateAuthorities:
       enrollId: admin
       enrollSecret: adminpw
     caName: ca_peerOrg2
+
+chaincodes:
+  fabcar:
+    chaincodeVersion: v2
+    chaincodeFilePath: Resource/Chaincode
+    chaincodePath: github.com/fabcar
+    chaincodeName: fabcar
+    chaincodeLanguage: GO

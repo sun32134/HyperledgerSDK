@@ -2,12 +2,10 @@ package test;
 
 import config.ReadConfig;
 import org.hyperledger.fabric.sdk.Channel;
-import org.hyperledger.fabric.sdk.Peer;
 import org.hyperledger.fabric.sdk.Peer.PeerRole;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.NetworkConfigurationException;
 import org.junit.Test;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,10 +28,5 @@ public class channelTest {
         for(PeerRole peerRole: PeerRole.values()){
             peerOptions.addPeerRole(peerRole);
         }
-    }
-
-    public static void main(String[] argv) throws IOException, NetworkConfigurationException, InvalidArgumentException {
-        channelTest channelTest = new channelTest();
-        channelTest.channelInitTest();
     }
 }

@@ -66,11 +66,11 @@ public class App {
          * 第一步：使用Org1的Client新建channel，之后将Org2的节点加入该channel, 之后将这段代码注释，进行第二部
          * */
 //        Channel channel = test.ChannelFactory.constructChannel("mychannel", admin1, hfClient, orderers, peers);
-//        test.ChannelFactory.joinChannel(channel, peers2);
+        test.ChannelFactory.joinChannel(channel, peers2);
         /**
          * 第三步：install链码，之后将代码注释，进行第四步
          * */
-//        installChaincode(hfClient, channel, org1, true);
+        installChaincode(hfClient, channel, org1, true);
 //        installChaincode(hfClient2, channel2, org2, true);
 
 
@@ -78,11 +78,11 @@ public class App {
         /**
          * 第四步：实例化链码
          * */
-//        instantiateChaincode(hfClient, chaincodeID, channel);
+        instantiateChaincode(hfClient, chaincodeID, channel);
         /**
          * 第五步：调用链码
          * */
-        // invodeChaincode(hfClient, channel, chaincodeID);
+         invodeChaincode(hfClient, channel, chaincodeID);
 
         /**
          * 第六步：查询链码

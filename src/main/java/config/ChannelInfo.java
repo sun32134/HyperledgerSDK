@@ -11,9 +11,9 @@ import java.io.IOException;
 import java.util.*;
 
 public class ChannelInfo {
-    private String channelName;
-    private List<Orderer> orderers;
-    private List<Peer> peers;
+    private final String channelName;
+    private final List<Orderer> orderers;
+    private final List<Peer> peers;
     private ChannelConfiguration channelConfiguration;
     private byte[] signature;
 

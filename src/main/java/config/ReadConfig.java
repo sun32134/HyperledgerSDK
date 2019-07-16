@@ -38,6 +38,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.Channel.PeerOptions;
 import org.hyperledger.fabric.sdk.Peer.PeerRole;
+import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.NetworkConfigurationException;
 import org.hyperledger.fabric.sdk.helper.Utils;
@@ -53,6 +54,7 @@ public class ReadConfig {
     private Map<String, ReadConfig.Node> peers;
     private Map<String, ReadConfig.Node> eventHubs;
     private Map<String, ReadConfig.OrgInfo> organizations;
+    private Map<String, ReadConfig.ChaincodeInfo> chaincodes;
     private static final Log logger = LogFactory.getLog(ReadConfig.class);
     private static Map<PeerRole, String> roleNameRemapHash = new HashMap<PeerRole, String>() {
         {
@@ -147,6 +149,9 @@ public class ReadConfig {
                 } else {
                     throw new InvalidArgumentException("A client organization must be specified");
                 }
+                Map<String, JsonObject> foundChaincodes = this.findChaincodes();
+                this.createAllChaincodes(foundChaincodes);
+
             } else {
                 throw new InvalidArgumentException("Network config must have a version");
             }
@@ -291,12 +296,16 @@ public class ReadConfig {
         }
     }
 
+    public ChaincodeInfo getChaincodeInfo(String chaincodeName){
+        return this.chaincodes.get(chaincodeName);
+    }
+
     public Map<String, Node> getChannelPeers(String channelName) throws NetworkConfigurationException {
         JsonObject channels = getJsonObject(this.jsonConfig, "channels");
         Map<String, Node> channelPeers = new HashMap<>();
         if(channels != null){
             JsonObject jsonChannel = getJsonObject(channels, channelName);
-            // TODO: 从json对象中拿到peer值
+            //从json对象中拿到peer值
             System.out.println(jsonChannel.toString());
             JsonObject jsonPeers = jsonChannel.getJsonObject("peers");
             assert jsonPeers != null;
@@ -327,7 +336,7 @@ public class ReadConfig {
         Map<String, Node> channelOrderers = new HashMap<>();
         if(channels != null){
             JsonObject jsonChannel = getJsonObject(channels, channelName);
-            // TODO: 从json对象中拿到Orderer值
+            // 从json对象中拿到Orderer值
             System.out.println(jsonChannel.toString());
             JsonArray jsonOrderers = getJsonValueAsArray(jsonChannel.get("orderers"));
             assert jsonOrderers != null;
@@ -470,6 +479,63 @@ public class ReadConfig {
         }
 
         return ret;
+    }
+
+    private Map<String, JsonObject> findChaincodes() throws NetworkConfigurationException {
+        Map<String, JsonObject> ret = new HashMap<>();
+        JsonObject jsonChaincodes = getJsonObject(this.jsonConfig, "chaincodes");
+        if(null != jsonChaincodes){
+            Iterator iterator =jsonChaincodes.entrySet().iterator();
+            while (iterator.hasNext()){
+                Entry<String, JsonValue> entry = (Entry)iterator.next();
+                String chaincodeName = entry.getKey();
+                JsonObject jsonChaincode = getJsonValueAsObject(entry.getValue());
+                if(jsonChaincode == null){
+                    throw  new NetworkConfigurationException(String.format("Error loading config. Invalid Chaincode entry: %s", chaincodeName));
+                }
+                ret.put(chaincodeName, jsonChaincode);
+            }
+        }
+        return ret;
+    }
+
+    private void createAllChaincodes(Map<String, JsonObject> foundChaincodes) throws NetworkConfigurationException {
+        // TODO: 初始化chaincode
+        if(this.chaincodes != null){
+            throw new NetworkConfigurationException("INTERNAL ERROR: chaincodes has already been initialized!");
+        }else{
+            this.chaincodes = new HashMap<>();
+            if(foundChaincodes != null){
+                Iterator iterator = foundChaincodes.entrySet().iterator();
+                while (iterator.hasNext()){
+                    Entry<String, JsonValue> entry = (Entry<String, JsonValue>) iterator.next();
+                    String chaincodeName = entry.getKey();
+                    JsonObject jsonChaincode = getJsonValueAsObject(entry.getValue());
+                    if(jsonChaincode == null){
+                        throw new NetworkConfigurationException(String.format("Error loading config. Invalid Organization entry: %s", chaincodeName));
+                    }
+                    else {
+                        ChaincodeInfo chaincode = this.createChaincode(chaincodeName, jsonChaincode);
+                        this.chaincodes.put(chaincodeName, chaincode);
+                    }
+                }
+            }
+        }
+    }
+
+    private ChaincodeInfo createChaincode(String chaincodeName, JsonObject jsonChaincode) throws NetworkConfigurationException {
+        // 读取config中chaincode信息
+        String version = getJsonValueAsString(jsonChaincode.get("chaincodeVersion"));
+        String chaincodeFilePath = getJsonValueAsString(jsonChaincode.get("chaincodeFilePath"));
+        String chaincodePath = getJsonValueAsString(jsonChaincode.get("chaincodePath"));
+        String chaincodeLanguage = getJsonValueAsString(jsonChaincode.get("chaincodeLanguage"));
+        String chaincodePolicyPath = getJsonValueAsString(jsonChaincode.get("chaincodePolicyPath"));
+        if(chaincodeLanguage.equals("GO")){
+            return new ChaincodeInfo(chaincodeName, version, chaincodeFilePath, chaincodePath, TransactionRequest.Type.GO_LANG, chaincodePolicyPath);
+        }
+        else{
+            throw new NetworkConfigurationException("Chaincode Language not support!");
+        }
     }
 
     private void createAllOrganizations(Map<String, JsonObject> foundCertificateAuthorities) throws NetworkConfigurationException {
@@ -640,6 +706,8 @@ public class ReadConfig {
         }
 
     }
+
+
 
     private ReadConfig.OrgInfo createOrg(String orgName, JsonObject jsonOrg, Map<String, JsonObject> foundCertificateAuthorities) throws NetworkConfigurationException {
         String msgPrefix = String.format("Organization %s", orgName);
@@ -1034,6 +1102,61 @@ public class ReadConfig {
 
         public ReadConfig.UserInfo getPeerAdmin() {
             return this.peerAdmin;
+        }
+    }
+
+    public static class ChaincodeInfo{
+        private final String name;
+        private final String version;
+        private final String filePath;
+        private final String path;
+        private final TransactionRequest.Type language;
+        private final String chaincodePolicyPath;
+        private final ChaincodeID chaincodeID;
+
+        ChaincodeInfo(String name, String version, String filePath, String path, TransactionRequest.Type language, String chaincodePolicyPath){
+            this.name = name;
+            this.version = version;
+            this.filePath = filePath;
+            this.path = path;
+            this.language = language;
+            this.chaincodeID = chaincodeInit();
+            this.chaincodePolicyPath = chaincodePolicyPath;
+        }
+
+        private ChaincodeID chaincodeInit(){
+            ChaincodeID.Builder chaincodeIDBuilder = ChaincodeID.newBuilder().setName(this.name)
+                    .setVersion(this.version);
+            chaincodeIDBuilder.setPath(this.path);
+            return chaincodeIDBuilder.build();
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+
+        public String getFilePath() {
+            return filePath;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public TransactionRequest.Type getLanguage() {
+            return language;
+        }
+
+        public ChaincodeID getChaincodeID() {
+            return chaincodeID;
+        }
+
+        public String getChaincodePolicyPath(){
+            return chaincodePolicyPath;
         }
     }
 
