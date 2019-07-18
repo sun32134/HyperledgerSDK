@@ -25,7 +25,8 @@ public class ChannelClient {
         for(Orderer orderer: orderers){
             channel.addOrderer(orderer);
         }
-        channel.initialize();
+
+//        channel.initialize();
         sampleStore.saveChannel(channel);
         return channel;
     }

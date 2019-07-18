@@ -6,7 +6,6 @@ import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.ProposalException;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -71,7 +70,7 @@ public class ChaincodeClient {
         ChaincodeEventListener chaincodeEventListener = (s, blockEvent, chaincodeEvent) -> {
             // TODO: event´¦Àíº¯Êý
             System.out.println(chaincodeEvent.getEventName());
-            System.out.println(Arrays.toString(chaincodeEvent.getPayload()));
+            System.out.println(new String(chaincodeEvent.getPayload()));
             latch.countDown();
         };
         String eventListenerHandle = channel.registerChaincodeEventListener(Pattern.compile(".*"),

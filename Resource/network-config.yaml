@@ -14,14 +14,14 @@ client:
     # [Optional]. Specific to FileKeyValueStore.js or similar implementations in other SDKs. Can be others
     # if using an alternative impl. For instance, CouchDBKeyValueStore.js would require an object
     # here for properties like url, db name, etc.
-    path: "Org1User"
+    path: "Org2User"
 
     # [Optional]. Specific to the CryptoSuite implementation. Software-based implementations like
     # CryptoSuite_ECDSA_AES.js in node SDK requires a key store. PKCS#11 based implementations does
     # not.
     cryptoStore:
       # Specific to the underlying KeyValueStore that backs the crypto key store.
-      path: "Org1User"
+      path: "Org2User"
 
     # [Optional]. Specific to Composer environment
     wallet: wallet-name
@@ -53,7 +53,9 @@ channels:
         ledgerQuery: true
         eventSource: true
     chaincodes:
-      - fabcar:v2
+      - fabcar:v1
+      - test:v1
+      - crm:v8
 
 organizations:
   Org1:
@@ -121,8 +123,22 @@ certificateAuthorities:
 
 chaincodes:
   fabcar:
-    chaincodeVersion: v2
+    chaincodeVersion: v1
     chaincodeFilePath: Resource/Chaincode
     chaincodePath: github.com/fabcar
     chaincodeName: fabcar
+    chaincodeLanguage: GO
+
+  test:
+    chaincodeVersion: v1
+    chaincodeFilePath: Resource/Chaincode
+    chaincodePath: github.com/CRM
+    chaincodeName: test
+    chaincodeLanguage: GO
+
+  crm:
+    chaincodeVersion: v8
+    chaincodeFilePath: Resource/Chaincode
+    chaincodePath: github.com/CRM
+    chaincodeName: crm
     chaincodeLanguage: GO

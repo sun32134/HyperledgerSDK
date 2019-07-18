@@ -4,32 +4,19 @@ import Sample.SampleStore;
 import Sample.SampleUser;
 import client.ChaincodeClient;
 import client.ChaincodeEventCapture;
-import client.ChannelClient;
-import config.ChannelInfo;
 import config.ReadConfig;
 import factory.ChannelFactory;
 import factory.TransactionReqFactory;
 import factory.UserFactory;
 import org.hyperledger.fabric.sdk.*;
-import org.hyperledger.fabric.sdk.exception.CryptoException;
-import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
-import org.hyperledger.fabric.sdk.exception.NetworkConfigurationException;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
 import org.junit.Test;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-import sun.awt.windows.WToolkit;
 
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Vector;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
 
 public class ChaincodeClientTest {
     @Test
@@ -41,13 +28,13 @@ public class ChaincodeClientTest {
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
-        Peer peer1 = hfClient.newPeer("peer0.org2.example.com", "grpc://192.168.1.164:8051");
-        Peer peer2 = hfClient.newPeer("peer1.org2.example.com", "grpc://192.168.1.164:8056");
+        Peer peer1 = hfClient.newPeer("peer0.org1.example.com", "grpc://192.168.1.164:7051");
+        Peer peer2 = hfClient.newPeer("peer1.org1.example.com", "grpc://192.168.1.164:7056");
         Collection<Peer> peers = new LinkedList<>();
         peers.add(peer1);
         peers.add(peer2);
 
-        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("fabcar");
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         InstallProposalRequest installProposalRequest = TransactionReqFactory.installChaincodeReqInit(hfClient, chaincodeInfo);
         ChaincodeClient.installChaincode(hfClient,peers,installProposalRequest);
     }
@@ -64,7 +51,7 @@ public class ChaincodeClientTest {
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
         Collection<Peer> peers = channel.getPeers();
 
-        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("fabcar");
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         InstantiateProposalRequest instantiateProposalRequest = TransactionReqFactory.instantiateChaincodeReqInit(hfClient,chaincodeInfo,"Init", new String[]{""});
         ChaincodeClient.instantiateChaincode(channel, peers,instantiateProposalRequest);
     }
@@ -81,7 +68,7 @@ public class ChaincodeClientTest {
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
         Collection<Peer> peers = channel.getPeers();
 
-        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("fabcar");
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         UpgradeProposalRequest instantiateProposalRequest = TransactionReqFactory.upgradeChaincodeReqInit(hfClient,chaincodeInfo,"Init", new String[]{""});
         ChaincodeClient.upgradeChaincode(channel, peers,instantiateProposalRequest);
     }
@@ -96,9 +83,13 @@ public class ChaincodeClientTest {
         hfClient.setUserContext(admin);
 
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
-        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("fabcar");
-        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "createCar",
-                new String[]{"sdfadf", "asdfasdf", "asdf", "wer", "asdf"});
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
+        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadRegister",
+                new String[]{"2", "asdfasdf", "asdf", "wer", "asdf", "asdf", "wer", "asdgawe", "adfaw", "asdfaw", "asdfwev"});
+//        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadDCI",
+//                new String[]{"1", "asdfasdf", "asdf", "wer", "asdf"});
+//        TransactionProposalRequest transactionProposalRequest =  TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "expiredDCI",
+//                new String[]{"1", "asdfasdf"});
         ChaincodeClient.invodeChaincode(channel,transactionProposalRequest);
     }
 
@@ -112,8 +103,8 @@ public class ChaincodeClientTest {
         hfClient.setUserContext(admin);
 
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
-        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("fabcar");
-        QueryByChaincodeRequest queryByChaincodeRequest = TransactionReqFactory.queryChaincodeReqInit(hfClient,chaincodeInfo.getChaincodeID(),"queryAllCars", new String[]{""});
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
+        QueryByChaincodeRequest queryByChaincodeRequest = TransactionReqFactory.queryChaincodeReqInit(hfClient,chaincodeInfo.getChaincodeID(),"queryRegister", new String[]{"1"});
         ChaincodeClient.queryChaincode(channel,queryByChaincodeRequest);
     }
 
@@ -133,11 +124,18 @@ public class ChaincodeClientTest {
         EventHub eventHub = hfClient.newEventHub(peerName,peerUrl,readConfig.getPeerProperties(peerName));
         channel.addEventHub(eventHub);
         Vector<ChaincodeEventCapture> chaincodeEvents = new Vector<>();
-        String EXPECTED_EVENT_NAME = "event";
+        String EXPECTED_EVENT_NAME = "upload success";
         CountDownLatch latch = new CountDownLatch(1);
         String eventListenerHandle = ChaincodeClient.setChaincodeEventListener(channel,EXPECTED_EVENT_NAME, latch);
         System.out.println("waiting for event");
         latch.await();
+    }
+
+    @Test
+    public void testJson(){
+        byte[] bytes = new byte[]{123, 34, 84, 120, 105, 100, 34, 58, 34, 55, 51, 101, 55, 56, 100, 100, 54, 97, 55, 100, 98, 101, 51, 101, 98, 102, 53, 56, 97, 56, 52, 100, 97, 57, 57, 49, 52, 53, 101, 99, 51, 50, 48, 53, 100, 97, 48, 54, 49, 101, 97, 49, 49, 97, 98, 48, 48, 102, 48, 55, 101, 50, 97, 49, 52, 53, 49, 52, 54, 101, 97, 97, 50, 34, 44, 34, 72, 97, 115, 104, 34, 58, 34, 50, 34, 125};
+        String s = new String(bytes);
+        System.out.println(s);
     }
 
 }
