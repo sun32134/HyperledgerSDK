@@ -6,7 +6,7 @@ description: "The network config"
 client:
   # Which organization does this application instance belong to? The value must be the name of an org
   # defined under "organizations"
-  organization: Org1
+  organization: Org2
 
   # Some SDKs support pluggable KV stores, the properties under "credentialStore"
   # are implementation specific
@@ -55,7 +55,7 @@ channels:
     chaincodes:
       - fabcar:v1
       - test:v1
-      - crm:v8
+      - crm:v9
 
 organizations:
   Org1:
@@ -137,7 +137,7 @@ chaincodes:
     chaincodeLanguage: GO
 
   crm:
-    chaincodeVersion: v8
+    chaincodeVersion: v9
     chaincodeFilePath: Resource/Chaincode
     chaincodePath: github.com/CRM
     chaincodeName: crm
