@@ -28,6 +28,7 @@ public class ChaincodeClientTest {
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
+        // 安装chaincode时需要注意将network-config中的client org部分修改成与该peer相同的Org，否则使用的私钥和证书会不对
         Peer peer1 = hfClient.newPeer("peer0.org1.example.com", "grpc://192.168.1.164:7051");
         Peer peer2 = hfClient.newPeer("peer1.org1.example.com", "grpc://192.168.1.164:7056");
         Collection<Peer> peers = new LinkedList<>();
@@ -85,11 +86,11 @@ public class ChaincodeClientTest {
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadRegister",
-                new String[]{"2", "asdfasdf", "asdf", "wer", "asdf", "asdf", "wer", "asdgawe", "adfaw", "asdfaw", "asdfwev"});
+                new String[]{"1", "asdfasdf", "asdf", "wer", "asdf", "asdf", "wer", "asdgawe", "adfaw", "asdfaw", "asdfwev"});
 //        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadDCI",
-//                new String[]{"1", "asdfasdf", "asdf", "wer", "asdf"});
+//                new String[]{"2", "asdfasdf", "asdf", "wer", "asdf"});
 //        TransactionProposalRequest transactionProposalRequest =  TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "expiredDCI",
-//                new String[]{"1", "asdfasdf"});
+//                new String[]{"2", "asdfasdf"});
         ChaincodeClient.invodeChaincode(channel,transactionProposalRequest);
     }
 
@@ -104,7 +105,7 @@ public class ChaincodeClientTest {
 
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
-        QueryByChaincodeRequest queryByChaincodeRequest = TransactionReqFactory.queryChaincodeReqInit(hfClient,chaincodeInfo.getChaincodeID(),"queryRegister", new String[]{"1"});
+        QueryByChaincodeRequest queryByChaincodeRequest = TransactionReqFactory.queryChaincodeReqInit(hfClient,chaincodeInfo.getChaincodeID(),"queryRegister", new String[]{"2"});
         ChaincodeClient.queryChaincode(channel,queryByChaincodeRequest);
     }
 
