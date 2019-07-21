@@ -1,0 +1,32 @@
+
+<!DOCTYPE HTML>
+
+<html xmlns:th="http://www.thymeleaf.org" xmlns: xmlns:>
+
+<head>
+    <title>Getting Started: Handling Form Submission</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+
+<body>
+
+<h1>Form</h1>
+
+<form action="#" th:action="@{/uploadRegister}" th:object="${PreRegister}" method="post">
+    <p>requestHash: <input type="text" th:field="*{requestHash}"/></p>
+    <p>CopyrightOwner: <input type="text" th:field="*{CopyrightOwner}"/></p>
+    <p>Title: <input type="text" th:field="*{Title}"/></p>
+    <p>Type: <input type="text" th:field="*{Type}"/></p>
+    <p>RequestTime: <input type="text" th:field="*{RequestTime}"/></p>
+    <p>CreationCompleteTime: <input type="text" th:field="*{CreationCompleteTime}"/></p>
+    <p>FirstPublishTime <input type="text" th:field="*{FirstPublishTime}"/></p>
+    <p>RequestUserId: <input type="text" th:field="*{RequestUserId}"/></p>
+    <p>Fingerprint: <input type="text" th:field="*{Fingerprint}"/></p>
+    <p>DownloadUrl: <input type="text" th:field="*{DownloadUrl}"/></p>
+    <p>SigAlgorithm: <input type="text" th:field="*{SigAlgorithm}"/></p>
+    <p><input type="submit" value="Submit"/> <input type="reset" value="Reset"/></p>
+</form>
+
+</body>
+
+</html>
