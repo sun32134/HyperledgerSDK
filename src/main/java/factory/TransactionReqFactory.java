@@ -21,6 +21,7 @@ public class TransactionReqFactory {
         installProposalRequest.setChaincodeSourceLocation(Paths.get(chaincodeInfo.getFilePath()).toFile());
         installProposalRequest.setChaincodeVersion(chaincodeID.getVersion());
         installProposalRequest.setChaincodeLanguage(chaincodeInfo.getLanguage());
+
         return installProposalRequest;
     }
 

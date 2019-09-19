@@ -14,14 +14,14 @@ client:
     # [Optional]. Specific to FileKeyValueStore.js or similar implementations in other SDKs. Can be others
     # if using an alternative impl. For instance, CouchDBKeyValueStore.js would require an object
     # here for properties like url, db name, etc.
-    path: "Org2User"
+    path: "Org1User"
 
     # [Optional]. Specific to the CryptoSuite implementation. Software-based implementations like
     # CryptoSuite_ECDSA_AES.js in node SDK requires a key store. PKCS#11 based implementations does
     # not.
     cryptoStore:
       # Specific to the underlying KeyValueStore that backs the crypto key store.
-      path: "Org2User"
+      path: "Org1User"
 
     # [Optional]. Specific to Composer environment
     wallet: wallet-name
@@ -29,78 +29,74 @@ client:
 channels:
   mychannel:
     orderers:
-      - orderer.example.com
+    - orderer0.beijinca.com
 
     peers:
-      peer0.org1.example.com:
+      peer0.org1.beijinca.com:
         endorsingPeer: true
         chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
-      peer1.org1.example.com:
-        ledgerQuery: true
-        eventSource: true
-      peer0.org2.example.com:
+      peer1.org1.beijinca.com:
         endorsingPeer: true
         chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
-      peer1.org2.example.com:
+      peer2.org1.beijinca.com:
+        endorsingPeer: true
+        chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
     chaincodes:
-      - fabcar:v1
-      - test:v1
-      - crm:v6
+    - crm:v1
 
 organizations:
   Org1:
     mspid: Org1MSP
     peers:
-      - peer0.org1.example.com
-      - peer1.org1.example.com
+    - peer0.org1.beijinca.com
+    - peer1.org1.beijinca.com
+    - peer2.org1.beijinca.com
     certificateAuthorities:
-      - ca_peerOrg1
+    - ca_peerOrg1
     adminPrivateKey:
-      path: Resource/Org1User/Admin@org1.example.com/msp/keystore/8b2b7555f2645cf9a7e1b22240b8c12b747e591f9fbca3cc6cd7a4ec5f743806_sk
+      path: Resource/Org1User/Admin@org1.beijinca.com/msp/keystore/1890a51bb0f2f19093c3ea1032a8de2abf68305f42dd9ea5002e972edce68110_sk
     signedCert:
-      path: Resource/Org1User/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem
-
-  Org2:
-    mspid: Org2MSP
-    peers:
-    - peer0.org2.example.com
-    - peer1.org2.example.com
-    certificateAuthorities:
-    - ca_peerOrg2
-    adminPrivateKey:
-      path: Resource/Org2User/Admin@org2.example.com/msp/keystore/3476811b6986a86b649abe5cb272be80a49b69809d1df4c03417119fc1124ce7_sk
-    signedCert:
-      path: Resource/Org2User/Admin@org2.example.com/msp/signcerts/Admin@org2.example.com-cert.pem
+      path: Resource/Org1User/Admin@org1.beijinca.com/msp/signcerts/Admin@org1.beijinca.com-cert.pem
 
 orderers:
-  orderer.example.com:
+  orderer0.beijinca.com:
     url: grpc://192.168.1.164:7050
     grpcOptions:
       grpc-max-send-message-length: 15
       grpc.keepalive_time_ms: 360000
       grpc.keepalive_timeout_ms: 180000
 
+  orderer1.beijinca.com:
+    url: grpc://192.168.1.164:8050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
+
+  orderer2.beijinca.com:
+    url: grpc://192.168.1.164:9050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
 
 peers:
-  peer0.org1.example.com:
+  peer0.org1.beijinca.com:
     url: grpc://192.168.1.164:7051
     grpcOptions:
       grpc.http2.keepalive_time: 15
 
-  peer1.org1.example.com:
+  peer1.org1.beijinca.com:
     url: grpc://192.168.1.164:7056
 
-  peer0.org2.example.com:
-    url: grpc://192.168.1.164:8051
-
-  peer1.org2.example.com:
-    url: grpc://192.168.1.164:8056
+  peer2.org1.beijinca.com:
+    url: grpc://192.168.1.164:7060
 
 certificateAuthorities:
   ca_peerOrg1:
@@ -110,30 +106,9 @@ certificateAuthorities:
       enrollSecret: adminpw
     caName: ca_peerOrg1
 
-  ca_peerOrg2:
-    url: grpc://192.168.1.164:8054
-    registrar:
-      enrollId: admin
-      enrollSecret: adminpw
-    caName: ca_peerOrg2
-
 chaincodes:
-  fabcar:
-    chaincodeVersion: v1
-    chaincodeFilePath: Resource/Chaincode
-    chaincodePath: github.com/fabcar
-    chaincodeName: fabcar
-    chaincodeLanguage: GO
-
-  test:
-    chaincodeVersion: v1
-    chaincodeFilePath: Resource/Chaincode
-    chaincodePath: github.com/CRM
-    chaincodeName: test
-    chaincodeLanguage: GO
-
   crm:
-    chaincodeVersion: v6
+    chaincodeVersion: v1
     chaincodeFilePath: Resource/Chaincode
     chaincodePath: github.com/CRM
     chaincodeName: crm

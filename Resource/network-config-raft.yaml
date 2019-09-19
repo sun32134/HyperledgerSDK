@@ -1,0 +1,175 @@
+name: "Network-Config"
+x-type: "hlfv1"
+version: 1.0.0
+description: "The network config"
+
+client:
+  # Which organization does this application instance belong to? The value must be the name of an org
+  # defined under "organizations"
+  organization: Org1
+
+  # Some SDKs support pluggable KV stores, the properties under "credentialStore"
+  # are implementation specific
+  credentialStore:
+    # [Optional]. Specific to FileKeyValueStore.js or similar implementations in other SDKs. Can be others
+    # if using an alternative impl. For instance, CouchDBKeyValueStore.js would require an object
+    # here for properties like url, db name, etc.
+    path: "Org2User"
+
+    # [Optional]. Specific to the CryptoSuite implementation. Software-based implementations like
+    # CryptoSuite_ECDSA_AES.js in node SDK requires a key store. PKCS#11 based implementations does
+    # not.
+    cryptoStore:
+      # Specific to the underlying KeyValueStore that backs the crypto key store.
+      path: "Org2User"
+
+    # [Optional]. Specific to Composer environment
+    wallet: wallet-name
+
+channels:
+  crmchannel:
+    orderers:
+    - orderer.beijinca.com
+    - orderer2.beijinca.com
+    - orderer3.beijinca.com
+    - orderer4.beijinca.com
+    - orderer5.beijinca.com
+    peers:
+      peer0.org1.beijinca.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer1.org1.beijinca.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer2.org1.beijinca.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+    chaincodes:
+    - crm:v1
+    - mycc:v1
+
+organizations:
+  Org1:
+    mspid: Org1MSP
+    peers:
+    - peer0.org1.beijinca.com
+    - peer1.org1.beijinca.com
+    - peer2.org1.beijinca.com
+    certificateAuthorities:
+    - ca_peerOrg1
+    adminPrivateKey:
+      path: Resource/Org1User/Admin@org1.beijinca.com/msp/keystore/1bd8d28af07ea60df9adbc88a95277ec15fd522edfb724cfce9b6998e0589647_sk
+    signedCert:
+      path: Resource/Org1User/Admin@org1.beijinca.com/msp/signcerts/Admin@org1.beijinca.com-cert.pem
+
+orderers:
+  orderer.beijinca.com:
+    url: grpcs://192.168.1.164:7050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
+      hostnameOverride: orderer.example.com
+    tlsCACerts:
+      path: Resource/TLS/orderer.beijinca.com/tls/server.crt
+
+  orderer2.beijinca.com:
+    url: grpcs://192.168.1.164:8050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
+      hostnameOverride: orderer2.example.com
+    tlsCACerts:
+      path: Resource/TLS/orderer2.beijinca.com/tls/server.crt
+
+  orderer3.beijinca.com:
+    url: grpcs://192.168.1.164:9050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
+      hostnameOverride: orderer3.example.com
+    tlsCACerts:
+      path: Resource/TLS/orderer3.beijinca.com/tls/server.crt
+
+  orderer4.beijinca.com:
+    url: grpcs://192.168.1.164:10050
+    grpcOptions:
+      grpc-max-send-message-length: 15
+      grpc.keepalive_time_ms: 360000
+      grpc.keepalive_timeout_ms: 180000
+      hostnameOverride: orderer4.example.com
+    tlsCACerts:
+      path: Resource/TLS/orderer4.beijinca.com/tls/server.crt
+
+  orderer5.beijinca.com:
+      url: grpcs://192.168.1.164:11050
+      grpcOptions:
+        grpc-max-send-message-length: 15
+        grpc.keepalive_time_ms: 360000
+        grpc.keepalive_timeout_ms: 180000
+        hostnameOverride: orderer5.example.com
+      tlsCACerts:
+        path: Resource/TLS/orderer5.beijinca.com/tls/server.crt
+
+peers:
+  peer0.org1.beijinca.com:
+    url: grpcs://192.168.1.164:7051
+    grpcOptions:
+      ssl-target-name-override: peer0.org1.beijinca.com
+      grpc.http2.keepalive_time: 15
+      sslProvider: openSSL
+      hostnameOverride: peer0.org1.beijinca.com
+    tlsCACerts:
+      path: Resource/TLS/peer0.org1.beijinca.com/tls/server.crt
+
+  peer1.org1.beijinca.com:
+    url: grpcs://192.168.1.164:8051
+    grpcOptions:
+      ssl-target-name-override: peer1.org1.beijinca.com
+      grpc.http2.keepalive_time: 15
+      sslProvider: openSSL
+      hostnameOverride: peer1.org1.beijinca.com
+    tlsCACerts:
+      path: Resource/TLS/peer1.org1.beijinca.com/tls/server.crt
+
+  peer2.org1.beijinca.com:
+    url: grpc://192.168.1.164:9051
+    grpcOptions:
+      ssl-target-name-override: peer2.org1.beijinca.com
+      grpc.http2.keepalive_time: 15
+      sslProvider: openSSL
+      hostnameOverride: peer2.org1.beijinca.com
+    tlsCACerts:
+      path: Resource/TLS/peer2.org1.beijinca.com/tls/server.crt
+
+certificateAuthorities:
+  ca_peerOrg1:
+    url: grpcs://192.168.1.164:7054
+    registrar:
+      enrollId: admin
+      enrollSecret: adminpw
+    caName: ca_peerOrg1
+    tlsCACerts:
+      path: Resource/TLS/ca/ca.org1.beijinca.com-cert.pem
+
+chaincodes:
+  crm:
+    chaincodeVersion: v1
+    chaincodeFilePath: Resource/Chaincode
+    chaincodePath: github.com/CRM
+    chaincodeName: crm
+    chaincodeLanguage: GO
+  mycc:
+    chaincodeVersion: v1
+    chaincodeFilePath: Resource/Chaincode
+    chaincodePath: github.com/mycc
+    chaincodeName: mycc
+    chaincodeLanguage: GO

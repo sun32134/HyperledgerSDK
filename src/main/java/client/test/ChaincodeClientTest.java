@@ -8,19 +8,79 @@ import config.ReadConfig;
 import factory.ChannelFactory;
 import factory.TransactionReqFactory;
 import factory.UserFactory;
+import org.bouncycastle.openssl.PEMWriter;
 import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
+import org.hyperledger.fabric_ca.sdk.EnrollmentRequest;
+import org.hyperledger.fabric_ca.sdk.HFCAClient;
+import org.hyperledger.fabric_ca.sdk.HFCAInfo;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.Vector;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.security.PrivateKey;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class ChaincodeClientTest {
+
+    public static String getPEMStringFromPrivateKey(PrivateKey privateKey) throws IOException {
+        StringWriter pemStrWriter = new StringWriter();
+        PEMWriter pemWriter = new PEMWriter(pemStrWriter);
+
+        pemWriter.writeObject(privateKey);
+
+        pemWriter.close();
+
+        return pemStrWriter.toString();
+    }
+
     @Test
-    public void installChainCodeTest() throws Exception {
+    public void userEnrollTest() throws Exception {
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-raft.yaml"));
+        ReadConfig.CAInfo caInfo = readConfig.getOrganizationInfo("Org1MSP").getCertificateAuthorities().get(0);
+        HFCAClient ca = HFCAClient.createNewInstance(caInfo.getCAName(), caInfo.getUrl(), caInfo.getProperties());
+        final EnrollmentRequest enrollmentRequestTLS = new EnrollmentRequest();
+        enrollmentRequestTLS.addHost("");
+        enrollmentRequestTLS.setProfile("tls");
+        ca.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        HFCAInfo info = ca.info();
+        System.out.println(info.getCAName());
+
+    }
+
+    @Test
+    public void installChainCodeRaftTest() throws Exception {
+        HFClient hfClient = HFClient.createNewInstance();
+        hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-raft.yaml"));
+        SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
+        hfClient.setUserContext(admin);
+        Properties properties = readConfig.getPeerProperties("peer0.org1.beijinca.com");
+        properties.put("clientKeyFile", "Resource/Org1User/Admin@org1.beijinca.com/tls/server.key");
+        properties.put("clientCertFile", "Resource/Org1User/Admin@org1.beijinca.com/tls/server.crt");
+
+
+        // 安装chaincode时需要注意将network-config中的client org部分修改成与该peer相同的Org，否则使用的私钥和证书会不对
+        Peer peer1 = hfClient.newPeer("peer0.org1.beijinca.com", "grpcs://192.168.1.164:7051", properties);
+
+
+//        Peer peer2 = hfClient.newPeer("peer1.org1.beijinca.com", "grpc://192.168.1.164:8051");
+//        Peer peer3 = hfClient.newPeer("peer2.org1.beijinca.com", "grpc://192.168.1.164:9051");
+        Collection<Peer> peers = new LinkedList<>();
+        peers.add(peer1);
+//        peers.add(peer2);
+//        peers.add(peer3);
+//
+//        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
+//        InstallProposalRequest installProposalRequest = TransactionReqFactory.installChaincodeReqInit(hfClient, chaincodeInfo);
+//        ChaincodeClient.installChaincode(hfClient,peers,installProposalRequest);
+    }
+
+    @Test
+    public void installChainCodeSoloTest() throws Exception {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
@@ -28,12 +88,14 @@ public class ChaincodeClientTest {
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
+
         // 安装chaincode时需要注意将network-config中的client org部分修改成与该peer相同的Org，否则使用的私钥和证书会不对
-        Peer peer1 = hfClient.newPeer("peer0.org2.example.com", "grpc://192.168.1.164:8051");
-        Peer peer2 = hfClient.newPeer("peer1.org2.example.com", "grpc://192.168.1.164:8056");
-        Collection<Peer> peers = new LinkedList<>();
+
+        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
+        Collection<Peer> peers = new HashSet<>();
+        Peer peer1 = hfClient.newPeer("peer0.org1.example.com", "grpc://192.168.1.164:7051");
         peers.add(peer1);
-        peers.add(peer2);
+
 
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         InstallProposalRequest installProposalRequest = TransactionReqFactory.installChaincodeReqInit(hfClient, chaincodeInfo);
@@ -45,11 +107,11 @@ public class ChaincodeClientTest {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
-        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config.yaml"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-raft.yaml"));
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
-        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
+        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"crmchannel", readConfig);
         Collection<Peer> peers = channel.getPeers();
 
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
@@ -58,7 +120,7 @@ public class ChaincodeClientTest {
     }
 
     @Test
-    public void upgradeChaincodeTest() throws Exception {
+    public void upgradeChaincodeSoloTest() throws Exception {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
@@ -67,15 +129,15 @@ public class ChaincodeClientTest {
         hfClient.setUserContext(admin);
 
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
-        Collection<Peer> peers = channel.getPeers();
+        Collection<Peer> peers = channel.getPeers(EnumSet.of(Peer.PeerRole.ENDORSING_PEER));
 
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         UpgradeProposalRequest instantiateProposalRequest = TransactionReqFactory.upgradeChaincodeReqInit(hfClient,chaincodeInfo,"Init", new String[]{""});
-        ChaincodeClient.upgradeChaincode(channel, peers,instantiateProposalRequest);
+        ChaincodeClient.upgradeChaincode(channel, peers, instantiateProposalRequest);
     }
 
     @Test
-    public void invokeChaincodeTest() throws Exception {
+    public void invokeChaincodeSoloTest() throws Exception {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
@@ -86,7 +148,7 @@ public class ChaincodeClientTest {
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
         ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
         TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadRegister",
-                new String[]{"3", "adfawe", "asdf", "wer", "asdf", "asdf", "wer", "asdgawe", "adfaw", "asdfaw", "asdfwev"});
+                new String[]{"1", "adfawe", "asdf", "wer", "asdf", "asdf", "wer", "asdgawe", "adfaw", "asdfaw", "asdfwev"});
 //        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadDCI",
 //                new String[]{"1", "asdfasdf", "asdf", "wer", "asdf"});
 //        TransactionProposalRequest transactionProposalRequest =  TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "expiredDCI",
@@ -95,7 +157,38 @@ public class ChaincodeClientTest {
     }
 
     @Test
+    public void uploadDCITest() throws Exception{
+        HFClient hfClient = HFClient.createNewInstance();
+        hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config.yaml"));
+        SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
+        hfClient.setUserContext(admin);
+
+        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
+        TransactionProposalRequest transactionProposalRequest = TransactionReqFactory.invodeChaincodeReqInit(hfClient, chaincodeInfo, "uploadDCI",
+                new String[]{"1", "asdfasdf", "asdf", "wer", "asdf"});
+        ChaincodeClient.invodeChaincode(channel,transactionProposalRequest);
+    }
+
+    @Test
     public void queryChaincodeTest() throws Exception{
+        HFClient hfClient = HFClient.createNewInstance();
+        hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
+        SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-raft.yaml"));
+        SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
+        hfClient.setUserContext(admin);
+
+        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"crmchannel", readConfig);
+        ReadConfig.ChaincodeInfo chaincodeInfo = readConfig.getChaincodeInfo("crm");
+        QueryByChaincodeRequest queryByChaincodeRequest = TransactionReqFactory.queryChaincodeReqInit(hfClient,chaincodeInfo.getChaincodeID(),"queryRegister", new String[]{"1"});
+        ChaincodeClient.queryChaincode(channel,queryByChaincodeRequest);
+    }
+
+    @Test
+    public void queryChaincodeSoloTest() throws Exception{
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
@@ -114,13 +207,13 @@ public class ChaincodeClientTest {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
-        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config.yaml"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-raft.yaml"));
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
-        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"mychannel", readConfig);
+        Channel channel = ChannelFactory.getChannelFromYaml(hfClient,"crmchannel", readConfig);
 
-        String peerName = "peer0.org1.example.com";
+        String peerName = "peer0.org1.beijinca.com";
         String peerUrl = "grpc://192.168.1.164:7051";
         EventHub eventHub = hfClient.newEventHub(peerName,peerUrl,readConfig.getPeerProperties(peerName));
         channel.addEventHub(eventHub);

@@ -1,12 +1,8 @@
 identities:
   user1Org1: {"role": {"name": "member", "mspId": "Org1MSP"}}
   adminOrg1: {"role": {"name": "admin", "mspId": "Org1MSP"}}
-  user1Org2: {"role": {"name": "member", "mspId": "Org2MSP"}}
-  adminOrg2: {"role": {"name": "admin", "mspId": "Org2MSP"}}
 
 policy:
   1-of:
     - signed-by: "user1Org1"
     - signed-by: "adminOrg1"
-    - signed-by: "user1Org2"
-    - signed-by: "adminOrg2"

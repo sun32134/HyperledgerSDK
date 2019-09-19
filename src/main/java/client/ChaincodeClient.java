@@ -80,7 +80,7 @@ public class ChaincodeClient {
     }
 
     public static void upgradeChaincode(Channel channel, Collection<Peer> peers, UpgradeProposalRequest upgradeProposalRequest) throws ProposalException, InvalidArgumentException {
-        Collection<ProposalResponse> responses = channel.sendUpgradeProposal(upgradeProposalRequest, channel.getPeers());
+        Collection<ProposalResponse> responses = channel.sendUpgradeProposal(upgradeProposalRequest, peers);
         CompletableFuture<BlockEvent.TransactionEvent> cf = channel.sendTransaction(responses);
         System.out.println("Chaincode " + upgradeProposalRequest.getChaincodeName() + " on channel " + channel.getName() + " instantiation " + cf);
         checkProposalResponse(responses);

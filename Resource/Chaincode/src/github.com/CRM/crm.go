@@ -75,7 +75,10 @@ func (s *smartcontract) queryInfo(APIstub shim.ChaincodeStubInterface, args []st
 		return shim.Error("Incorrect number of arguments. Expecting 1, get " + string(len(args)))
 	}
 	infoAsBytes, _ := APIstub.GetState(args[0])
-	return shim.Success(infoAsBytes)
+	if checkState(infoAsBytes) {
+		return shim.Success(infoAsBytes)
+	}
+	return shim.Error("Error: query failed for " + args[0])
 }
 
 func (s *smartcontract) uploadDCI(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
@@ -83,6 +86,9 @@ func (s *smartcontract) uploadDCI(APIstub shim.ChaincodeStubInterface, args []st
 		return shim.Error("Incorrect number of arguments. Expecting 5")
 	}
 	rowAsBytes, _ := APIstub.GetState(args[0])
+	if !checkState(rowAsBytes) {
+		return shim.Error("Error: upload DCI failed for " + args[0])
+	}
 	row := Info{}
 	json.Unmarshal(rowAsBytes, &row)
 	row.DCI = args[1]
@@ -104,6 +110,9 @@ func (s *smartcontract) expiredDCI(APIstub shim.ChaincodeStubInterface, args []s
 		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
 	rowAsBytes, _ := APIstub.GetState(args[0])
+	if !checkState(rowAsBytes) {
+		return shim.Error("Error: expired DCI failed for " + args[0])
+	}
 	row := Info{}
 	json.Unmarshal(rowAsBytes, &row)
 	row.DCIStatus = args[1]
@@ -115,6 +124,14 @@ func (s *smartcontract) expiredDCI(APIstub shim.ChaincodeStubInterface, args []s
 	eventAsBytes, _ := json.Marshal(event)
 	APIstub.SetEvent("expired DCI upload", eventAsBytes)
 	return shim.Success([]byte("DCI expired upload success"))
+}
+
+func checkState(infoAsBytes []byte) bool {
+	arrLength := len(infoAsBytes)
+	if arrLength == 0 {
+		return false
+	}
+	return true
 }
 
 func main() {

@@ -24,7 +24,7 @@ public class ChannelFactoryTest {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
-        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config.yaml"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-kafka.yaml"));
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
@@ -38,14 +38,14 @@ public class ChannelFactoryTest {
         HFClient hfClient = HFClient.createNewInstance();
         hfClient.setCryptoSuite(CryptoSuite.Factory.getCryptoSuite());
         SampleStore sampleStore = new SampleStore(new File(System.getProperty("user.home"), "test.properties"));
-        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config.yaml"));
+        ReadConfig readConfig = ReadConfig.fromYamlFile(new File("Resource/network-config-kafka.yaml"));
         SampleUser admin = UserFactory.getAdmin(sampleStore, readConfig);
         hfClient.setUserContext(admin);
 
         Channel channel = ChannelFactory.getChannelFromYaml(hfClient, "mychannel", readConfig);
 
-        String peerName = "peer1.org2.example.com";
-        String peerUrl = "grpc://192.168.1.164:8056";
+        String peerName = "peer2.org1.beijinca.com";
+        String peerUrl = "grpc://192.168.1.164:7060";
         Peer peer = hfClient.newPeer(peerName, peerUrl, readConfig.getPeerProperties(peerName));
         ChannelClient.joinChannel(channel, peer, Channel.PeerOptions.createPeerOptions().setPeerRoles(Peer.PeerRole.ALL),sampleStore);
     }
