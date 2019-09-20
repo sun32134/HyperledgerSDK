@@ -30,10 +30,6 @@ channels:
   crmchannel:
     orderers:
     - orderer.beijinca.com
-    - orderer2.beijinca.com
-    - orderer3.beijinca.com
-    - orderer4.beijinca.com
-    - orderer5.beijinca.com
     peers:
       peer0.org1.beijinca.com:
         endorsingPeer: true
@@ -64,9 +60,9 @@ organizations:
     certificateAuthorities:
     - ca_peerOrg1
     adminPrivateKey:
-      path: Resource/Org1User/Admin@org1.beijinca.com/msp/keystore/1bd8d28af07ea60df9adbc88a95277ec15fd522edfb724cfce9b6998e0589647_sk
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/users/Admin@org1.beijinca.com/msp/keystore/5542aac0ecbfded93112eceb50b46f943407d1ec7787b1fc5d239571720a3d6d_sk
     signedCert:
-      path: Resource/Org1User/Admin@org1.beijinca.com/msp/signcerts/Admin@org1.beijinca.com-cert.pem
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/users/Admin@org1.beijinca.com/msp/signcerts/Admin@org1.beijinca.com-cert.pem
 
 orderers:
   orderer.beijinca.com:
@@ -75,49 +71,11 @@ orderers:
       grpc-max-send-message-length: 15
       grpc.keepalive_time_ms: 360000
       grpc.keepalive_timeout_ms: 180000
-      hostnameOverride: orderer.example.com
+      hostnameOverride: orderer.beijinca.com
+      sslProvider: openSSL
+      negotiationType: TLS
     tlsCACerts:
-      path: Resource/TLS/orderer.beijinca.com/tls/server.crt
-
-  orderer2.beijinca.com:
-    url: grpcs://192.168.1.164:8050
-    grpcOptions:
-      grpc-max-send-message-length: 15
-      grpc.keepalive_time_ms: 360000
-      grpc.keepalive_timeout_ms: 180000
-      hostnameOverride: orderer2.example.com
-    tlsCACerts:
-      path: Resource/TLS/orderer2.beijinca.com/tls/server.crt
-
-  orderer3.beijinca.com:
-    url: grpcs://192.168.1.164:9050
-    grpcOptions:
-      grpc-max-send-message-length: 15
-      grpc.keepalive_time_ms: 360000
-      grpc.keepalive_timeout_ms: 180000
-      hostnameOverride: orderer3.example.com
-    tlsCACerts:
-      path: Resource/TLS/orderer3.beijinca.com/tls/server.crt
-
-  orderer4.beijinca.com:
-    url: grpcs://192.168.1.164:10050
-    grpcOptions:
-      grpc-max-send-message-length: 15
-      grpc.keepalive_time_ms: 360000
-      grpc.keepalive_timeout_ms: 180000
-      hostnameOverride: orderer4.example.com
-    tlsCACerts:
-      path: Resource/TLS/orderer4.beijinca.com/tls/server.crt
-
-  orderer5.beijinca.com:
-      url: grpcs://192.168.1.164:11050
-      grpcOptions:
-        grpc-max-send-message-length: 15
-        grpc.keepalive_time_ms: 360000
-        grpc.keepalive_timeout_ms: 180000
-        hostnameOverride: orderer5.example.com
-      tlsCACerts:
-        path: Resource/TLS/orderer5.beijinca.com/tls/server.crt
+      path: Resource/crypto-config-raft/ordererOrganizations/beijinca.com/orderers/orderer.beijinca.com/tls/ca.crt
 
 peers:
   peer0.org1.beijinca.com:
@@ -126,9 +84,10 @@ peers:
       ssl-target-name-override: peer0.org1.beijinca.com
       grpc.http2.keepalive_time: 15
       sslProvider: openSSL
+      negotiationType: TLS
       hostnameOverride: peer0.org1.beijinca.com
     tlsCACerts:
-      path: Resource/TLS/peer0.org1.beijinca.com/tls/server.crt
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/peers/peer0.org1.beijinca.com/tls/ca.crt
 
   peer1.org1.beijinca.com:
     url: grpcs://192.168.1.164:8051
@@ -137,18 +96,20 @@ peers:
       grpc.http2.keepalive_time: 15
       sslProvider: openSSL
       hostnameOverride: peer1.org1.beijinca.com
+      negotiationType: TLS
     tlsCACerts:
-      path: Resource/TLS/peer1.org1.beijinca.com/tls/server.crt
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/peers/peer1.org1.beijinca.com/tls/ca.crt
 
   peer2.org1.beijinca.com:
-    url: grpc://192.168.1.164:9051
+    url: grpcs://192.168.1.164:9051
     grpcOptions:
       ssl-target-name-override: peer2.org1.beijinca.com
       grpc.http2.keepalive_time: 15
       sslProvider: openSSL
       hostnameOverride: peer2.org1.beijinca.com
+      negotiationType: TLS
     tlsCACerts:
-      path: Resource/TLS/peer2.org1.beijinca.com/tls/server.crt
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/peers/peer2.org1.beijinca.com/tls/ca.crt
 
 certificateAuthorities:
   ca_peerOrg1:
@@ -158,7 +119,7 @@ certificateAuthorities:
       enrollSecret: adminpw
     caName: ca_peerOrg1
     tlsCACerts:
-      path: Resource/TLS/ca/ca.org1.beijinca.com-cert.pem
+      path: Resource/crypto-config-raft/peerOrganizations/org1.beijinca.com/tlsca/tlsca.org1.beijinca.com-cert.pem
 
 chaincodes:
   crm:

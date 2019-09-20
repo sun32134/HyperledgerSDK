@@ -38,4 +38,11 @@ public class ChannelClient {
         channel.joinPeer(peer, peerOptions);
         sampleStore.saveChannel(channel);
     }
+
+    /**
+     * TODO: Éý¼¶Channel
+     */
+    public static void upgradeChannel(){
+
+    }
 }
